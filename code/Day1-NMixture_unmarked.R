@@ -292,10 +292,8 @@ ranef(m1)
 
 
 # code to explore on your own if you have time
-plot(ranef(m1), xlim=c(0,35))
 
-
-# goodness-of-fit
+# goodness-of-fit test
 require(AICcmodavg)
 
 m1.gof <- Nmix.gof.test(m1, nsim = 100) # nsim is 100 only for illustrative purposes,
@@ -313,7 +311,7 @@ library(raster)
 library(rgdal)
 
 # Load the burned severity raster of our study area
-fire <- raster("BurnSeverity.tif")
+fire <- raster("data/BurnSeverity.tif")
 mapPalette <- colorRampPalette(c("grey", "yellow", "orange", "red"))
 plot(fire, col = mapPalette(100), axes = F, box = F, main = "% Burned Area")
 res(fire) # 30 m x 30 m resolution (grid size)
