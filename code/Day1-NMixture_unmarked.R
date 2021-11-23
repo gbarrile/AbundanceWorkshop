@@ -450,6 +450,9 @@ plot(r1, col = mapPalette(100), axes = F, box = F, main = "Salamander abundance"
 plot(fire, col = mapPalette(100), axes = F, box = F, main = "% Burned Area")
 
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# END
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 
 
