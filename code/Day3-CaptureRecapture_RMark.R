@@ -28,10 +28,8 @@ require(ggplot2)
 citation("RMark")
 
 # read-in the boreal toad capture-mark-recapture data from our three ponds  
-setwd("H:/Abundance_Workshop")
 #  read-in data from the csv
-df <- read.csv("BorealToad_CaptureRecapture.csv")
-# df <- read.csv("data/BorealToad_CaptureRecapture.csv")
+df <- read.csv("data/BorealToad_CaptureRecapture.csv")
 
 # so now we have our data stored as 'df'
 
@@ -231,7 +229,7 @@ f0.=list(formula= ~ 1)
 # directory does not get cluttered
 # Create a new folder called 'models' in your working directory
 # set working directory to that folder
-setwd("H:/Abundance_Workshop/models")
+setwd()
 
 m1 <- mark(d.proc,
            d.ddl, 
@@ -300,7 +298,7 @@ f0.pond =list(formula= ~ pond)
 
 # fit model
 # again specify your output folder
-setwd("H:/Abundance_Workshop/models")
+setwd()
 
 m2 <- mark(d.proc,
            d.ddl, 
@@ -473,7 +471,6 @@ pc.=list(formula= ~ 1, share = TRUE)
 
 
 # fit Model 3
-
 m3 <- mark(d.proc,
            d.ddl, 
            model.parameters = list(p = pc.))
@@ -526,8 +523,7 @@ m3$results$derived
 pc.svl =list(formula= ~ svl, share = TRUE)
 
 
-# fit Model 2
-
+# fit Model 4
 m4 <- mark(d.proc,
            d.ddl, 
            model.parameters = list(p = pc.svl))
