@@ -1,49 +1,97 @@
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# ABUNDANCE ESTIMATION WORKSHOP
+# Sponsored by Wyoming EPSCoR
+# Example 1: Binomial N-mixture model
 
-# November 29, 2021
+# Description: Steps through an example analysis of repeated count data
+# using the N-mixture model of Royle et al. 2004 as 
+# implemented in the package `unmarked`.
 
-# Day 1 of workshop: Statistical Methods for Estimating Abundance in Ecology
-
-# Code to fit 'Closed Population N-mixture Model' in the 'unmarked' package
+# Royle, J.A. (2004) N-Mixture Models for Estimating Population Size
+# from Spatially Replicated Counts. Biometrics 60, pp. 108–105.
 
 # Addressing the question: "How does wildfire influence salamander abundance?"
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Gabe Barrile - Colorado State University
+# Last updated 11/23/2021
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 
-# install the packages that we will use:
-# install.packages("unmarked")
-# install.packages("reshape")
 
-# make sure packages are installed and active
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# ---- Outline -----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# This script contains the following sections:
+# 1) Install and load packages
+# 2) Read in input data
+# 3) Format input datasets for unmarked
+# 4) Fit a hierarchical distance-sampling model
+# 5) Model selection with covariates
+# 6) Prediction and plotting
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# ---- 1) Install and load packages -----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# Check if unmarked and reshape are installed.
+# If yes, load them.  If not, install, then load.
+
+# unmarked for fitting the Binomial N-mixture model
+if("unmarked" %in% rownames(installed.packages()) == FALSE) {
+  install.packages("unmarked")
+}
 require(unmarked)
+
+# reshape to format data
+if("reshape" %in% rownames(installed.packages()) == FALSE) {
+  install.packages("reshape")
+}
 require(reshape)
 
-# citing the unmarked package
+
+# if you needed to cite the unmarked package
 citation("unmarked")
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# ---- 2) Read in input data -----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+
+
+# Specify the path that contains the salamander count data (Salamander_Wildfire.csv) 
+setwd()
 
 # read-in the salamander count data
 df <- read.csv("data/Salamander_Wildfire.csv")
 
-# so now we have our data stored as 'df'
+# We now have our data stored as 'df'
 # check out our data
 head(df)
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# how many transects did we survey?
-
+# QUESTION: how many transects did we survey?
+# Hint: can use unique() function
+#
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# ---- 3) Format input for unmarked -----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 # order the data frame by transect
 df <- with(df,df[order(Transect),])
 df
 
-
-
-# 1.
 # format count data for unmarked
+# you can just run the next few lines of code, then check out the 'C' matrix
 m <- melt(df,id.var=c("Transect","Survey"),measure.var="Count")
 head(m)
 
@@ -56,19 +104,20 @@ C <- as.matrix(y[,2:K])
 C # each transect is a row (10 rows)
 # each column indicates the survey at each site (three surveys at each transect)
 
-# Does our matrix of counts match our field data?
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# QUESTION: Does our matrix of counts match our field data?
 # Check: how many salamanders were observed at Transect 2 during Survey 2?
 head(df)
 # Now using the counts matrix, how many salamanders were observed at Transect 2 during Survey 2?
 C
 # Do the number of salamanders match between the field data and counts matrix?
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-
-# 2.
 # format covariates for abundance and detection probability
-# hypothesized that percent burned area influences abundance
-# hypothesized that time of day influences detection probability
+# we hypothesized that percent burned area influences abundance
+# we hypothesized that time of day influences detection probability
 
 # Site-level covariates versus Observational covariates
 
@@ -95,13 +144,14 @@ burned
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Do the values for percent burned area match our field data?
+# QUESTION: Do the values for percent burned area match our field data?
 # Check: what was the percent burned area at Transect 2?
 head(df)
 # Now with the percent burned values, what was the percent burned area at Transect 2?
 burned
 # Do they match?
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 
 # Format time of day as a covariate on detection (as an 'observation' covariate)
@@ -115,7 +165,7 @@ time <- as.matrix(y[,2:K])
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Do the values for time match our field data?
+# QUESTION: Do the values for time match our field data?
 # Check: what time was Survey 3 conducted at Transect 2?
 head(df)
 # Now with the time values, what time was Survey 3 conducted at Transect 2??
@@ -142,18 +192,24 @@ time   # time recorded during every survey (we think it might influence detectio
 ?unmarkedFramePCount
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
 # Input data into an 'unmarked data frame'
 umf <- unmarkedFramePCount(
   y=C,                                   # Counts matrix
   siteCovs= data.frame(burned = burned), # Site covariates
   obsCovs = list(time = time))           # Observation covariates
 
-# look at the summary our dataframe
+
+# Explore umf, the input data to unmarked for analysis
+# Good point to stop and ensure you're feeding the model what you think you are
+head(umf)
 summary(umf)
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# ---- 4) Fit a Binomial N-mixture model -----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 # Fit Closed Binomial N-mixture Model
 ?pcount
