@@ -27,9 +27,9 @@
 # 1) Install and load packages
 # 2) Read in input data
 # 3) Format input datasets for unmarked
-# 4) Fit a hierarchical distance-sampling model
-# 5) Model selection with covariates
-# 6) Prediction and plotting
+# 4) Fit Binomial N-mixture models
+# 5) Prediction and plotting
+# 6) Code to explore on your own (or as a group if there's time)
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 
@@ -82,8 +82,9 @@ head(df)
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 
+
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
-# ---- 3) Format input for unmarked -----
+# ---- 3) Format data for unmarked -----
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 # order the data frame by transect
@@ -203,21 +204,32 @@ umf <- unmarkedFramePCount(
 # Good point to stop and ensure you're feeding the model what you think you are
 head(umf)
 summary(umf)
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# QUESTION: Is the number of sites (transects) correct in 'umf'?
+# Is the site-covariate correct?
+# Is the observation-level covariate correct?
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
-# ---- 4) Fit a Binomial N-mixture model -----
+# ---- 4) Fit Binomial N-mixture models -----
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 # Fit Closed Binomial N-mixture Model
-?pcount
 # Let's first fit a null model
 m1 <- pcount(~1 ~1, data=umf, K=130) # don't worry about K right now
-summary(m1)
+
+# Look at output
+m1
+coef(m1)
+
+# Back-transformed output
+backTransform(m1, type="state")
+backTransform(m1, type="det")  # detection on probability scale
+
 # Extract abundance at each transect
-ranef(m1)
 meanEst <- bup(ranef(m1))
 # compare this to the maximum count at each transect
 maxCount <- aggregate(Count ~ Transect, data=df, FUN=max)
@@ -228,18 +240,21 @@ maxCount$mean_estimate <- meanEst
 plot(maxCount$Transect, maxCount$mean_estimate, pch=16, col="blue",
      ylab="Salamander Count / Abundance", xlab="Transect")
 points(maxCount$Transect, maxCount$Count, pch=16, col="black")
-legend(6.5, 33, c("Mean predicted abundance", "Maximum count"),
+legend(6, 33, c("Predicted abundance", "Maximum count"),
        col=c("blue", "black"), pch = 16)
-# Discuss the results of this figure as a group
+# QUESTION: Discuss the results of this figure as a group
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
-# Fit Closed Binomial N-mixture Model
+
+# Let's fit a model that addresses our focal question (and hypothesis)
+# model detection as a function of the time of day when a survey was conducted
+# model abundance as a function of the percent burned area at each transect
 
 # linear model for p (detection) follows first tilde, 
 # then comes linear model for abundance (may see abundance ref. to as lambda for this model)
-m1 <- pcount(~time ~burned, data=umf, K=130)
+m2 <- pcount(~time ~burned, data=umf, K=130)
 # Here 'K' is the upper summation limit for the summation over the random effects
 # in the integrated likelihood. In unmarked, the default choice of K is the maximum
 # observed count plus 100. That should normally be adequate, but you can play with K
@@ -256,9 +271,12 @@ max(C) # max observed count was 30...30+100=130 for K
 # of counts along transects.
 
 
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# check out summary of the model
-summary(m1)
+# QUESTIONS:
+
+# Look at output
+m2
 
 # Positive or negative relationship with abundance and percent burned area? 
 # Is the relationship significant?
@@ -266,33 +284,23 @@ summary(m1)
 # Positive or negative relationship with detection and time of day? 
 # Is the relationship significant?
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 
-# We can choose alternate models for abundance other than the Poisson distribution
 
-# Negative Binomial 
-m2 <- pcount(~time ~burned, data=umf, mixture="NB", K=130)
-
-# Zero-inflated Poisson
-m3 <- pcount(~time ~burned, data=umf, mixture="ZIP", K=130)
-
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Compare models using AIC
-cbind(AIC.P=m1@AIC, AIC.NB=m2@AIC, AIC.ZIP=m3@AIC)
-# Poisson has lowest AIC. Why might this be? Discuss amongst the group.
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# ---- 5) Prediction and plotting -----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 # Predictions of abundance at specified values of percent burned area, say 0, 30, and 60)
 newdat <- data.frame(burned=c(0, 30, 60))
-predict(m1, type="state", newdata=newdat, append = T)
+predict(m2, type="state", newdata=newdat, append = T)
 # 'predict' here uses delta rule to compute SEs and 95% CIs
 
 
 # Predictions of p (detection probability) for values of time (e.g., 7am, 9am, and 11am)
 newdat <- data.frame(time=c(7,9,11))
-predict(m1, type="det", newdata=newdat, append = T)
+predict(m2, type="det", newdata=newdat, append = T)
 
 
 # Visualize covariate relationships
@@ -301,13 +309,13 @@ predict(m1, type="det", newdata=newdat, append = T)
 # a suitable range for % burned area values
 range(burned)
 newdat <- data.frame(burned=seq(0, 60, length.out = 40))
-pred.lam <- predict(m1, type="state", newdata=newdat, appendData = TRUE)
+pred.lam <- predict(m2, type="state", newdata=newdat, appendData = TRUE)
 
 # For detection, predict to a new dataframe with 
 # a suitable range for time of day values
 range(time)
 newdat <- data.frame(time=seq(7, 12, length.out = 20))
-pred.det <- predict(m1, type="det", newdata=newdat, appendData = TRUE)
+pred.det <- predict(m2, type="det", newdata=newdat, appendData = TRUE)
 
 
 # plot abundance relationship with percent burned area
@@ -325,7 +333,7 @@ lines(pred.lam$burned, pred.lam$upper, lwd=4, lty=2, col="black")
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# What is the mean predicted abundance when percent burned area is 12%
+# QUESTION: What is the mean predicted abundance when percent burned area is 12%
 # Hint: you may need to use code from earlier in the script
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -349,7 +357,7 @@ lines(pred.det$time, pred.det$upper, lwd=4, lty=2, col="black")
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# What is the mean predicted detection for surveys conducted at 10am?
+# QUESTION: What is the mean predicted detection for surveys conducted at 10am?
 # Hint: you may need to use code from earlier in the script
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -367,18 +375,17 @@ ranef(m1)
 
 
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 
-
-
-# STOP
-
-# code to explore on your own if you have time
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# ---- 6) Code to explore on your own (or as a group if there's time) -----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 # goodness-of-fit test
 require(AICcmodavg)
 
-m1.gof <- Nmix.gof.test(m1, nsim = 100) # nsim is 100 only for illustrative purposes,
+m1.gof <- Nmix.gof.test(m2, nsim = 100) # nsim is 100 only for illustrative purposes,
 # you should probably run at least 1000 bootstrap replicates in your analysis
 
 # p-value here suggests that we fail to reject the null (CANNOT conclude that
@@ -386,6 +393,27 @@ m1.gof <- Nmix.gof.test(m1, nsim = 100) # nsim is 100 only for illustrative purp
 
 # if p-value was less than alpha (e.g., 0.05), by contrast, then we would conclude that
 # the observed data are statistically different from the expected values (lack of fit)
+
+
+
+
+
+# We can choose alternate models for abundance other than the Poisson distribution
+# Negative Binomial 
+m3 <- pcount(~time ~burned, data=umf, mixture="NB", K=130)
+
+# Zero-inflated Poisson
+m4 <- pcount(~time ~burned, data=umf, mixture="ZIP", K=130)
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Compare models using AIC
+cbind(AIC.P=m2@AIC, AIC.NB=m3@AIC, AIC.ZIP=m4@AIC)
+# QUESTION: Poisson has lowest AIC. Why might this be? Discuss with the group.
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
 
 
 # Predict back to landscape
@@ -403,7 +431,7 @@ CH <- data.frame(x = CH$x, y = CH$y, burned = CH$BurnSeverity)
 
 # Get predictions of abundance for each 30 m x 30 m cell of study area
 newData <- data.frame(burned = CH$burned)
-predCH <- predict(m1, type="state", newdata=newData)
+predCH <- predict(m2, type="state", newdata=newData)
 
 # Define new data frame with coordinates and outcome to be plotted
 PARAM <- data.frame(x = CH$x, y = CH$y, z = predCH$Predicted)
