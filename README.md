@@ -1,5 +1,5 @@
 # Statistical Methods for Estimating Abundance in Ecology
-Workshop materials (code, slides, data) for workshop on abundance estimation hosted by the Wyoming EPSCoR Program.
+Materials (i.e., code, slides, data) associated with a workshop on abundance estimation hosted by the Wyoming EPSCoR Program.
 
 
 ### Content:
