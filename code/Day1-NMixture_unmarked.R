@@ -30,9 +30,11 @@ df <- read.csv("data/Salamander_Wildfire.csv")
 # check out our data
 head(df)
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # how many transects did we survey?
 
-
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # order the data frame by transect
 df <- with(df,df[order(Transect),])
@@ -91,13 +93,15 @@ burned <- unique(df[,c("Transect","Burned")])
 burned <- as.matrix(burned[,"Burned"])
 burned
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Do the values for percent burned area match our field data?
 # Check: what was the percent burned area at Transect 2?
 head(df)
 # Now with the percent burned values, what was the percent burned area at Transect 2?
 burned
 # Do they match?
-
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 # Format time of day as a covariate on detection (as an 'observation' covariate)
@@ -110,13 +114,14 @@ K <- ncol(y)
 time <- as.matrix(y[,2:K])
 
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Do the values for time match our field data?
 # Check: what time was Survey 3 conducted at Transect 2?
 head(df)
 # Now with the time values, what time was Survey 3 conducted at Transect 2??
 time
 # Do they match?
-
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 # remove objects that we don't need
@@ -130,10 +135,12 @@ time   # time recorded during every survey (we think it might influence detectio
 
 # important to remember that we can also include site covariates on detection
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Let's examine the functions within 'unmarked' that we will use
 ?pcount
 ?unmarkedFramePCount
-
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 # Input data into an 'unmarked data frame'
@@ -160,12 +167,15 @@ meanEst <- bup(ranef(m1))
 maxCount <- aggregate(Count ~ Transect, data=df, FUN=max)
 maxCount$mean_estimate <- meanEst
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 plot(maxCount$Transect, maxCount$mean_estimate, pch=16, col="blue",
      ylab="Salamander Count / Abundance", xlab="Transect")
 points(maxCount$Transect, maxCount$Count, pch=16, col="black")
 legend(6.5, 33, c("Mean predicted abundance", "Maximum count"),
        col=c("blue", "black"), pch = 16)
-
+# Discuss the results of this figure as a group
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
@@ -190,6 +200,7 @@ max(C) # max observed count was 30...30+100=130 for K
 # of counts along transects.
 
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # check out summary of the model
 summary(m1)
 
@@ -198,7 +209,7 @@ summary(m1)
 
 # Positive or negative relationship with detection and time of day? 
 # Is the relationship significant?
-
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 # We can choose alternate models for abundance other than the Poisson distribution
@@ -209,10 +220,12 @@ m2 <- pcount(~time ~burned, data=umf, mixture="NB", K=130)
 # Zero-inflated Poisson
 m3 <- pcount(~time ~burned, data=umf, mixture="ZIP", K=130)
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Compare models using AIC
 cbind(AIC.P=m1@AIC, AIC.NB=m2@AIC, AIC.ZIP=m3@AIC)
-
 # Poisson has lowest AIC. Why might this be? Discuss amongst the group.
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 # Predictions of abundance at specified values of percent burned area, say 0, 30, and 60)
@@ -254,8 +267,13 @@ lines(pred.lam$burned, pred.lam$lower, lwd=4, lty=2, col="black")
 lines(pred.lam$burned, pred.lam$upper, lwd=4, lty=2, col="black")
 
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # What is the mean predicted abundance when percent burned area is 12%
 # Hint: you may need to use code from earlier in the script
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 
 
@@ -273,9 +291,12 @@ lines(pred.det$time, pred.det$lower, lwd=4, lty=2, col="black")
 lines(pred.det$time, pred.det$upper, lwd=4, lty=2, col="black")
 
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # What is the mean predicted detection for surveys conducted at 10am?
 # Hint: you may need to use code from earlier in the script
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 # Extract abundance at each transect
@@ -290,6 +311,11 @@ ranef(m1)
 
 
 
+
+
+
+
+# STOP
 
 # code to explore on your own if you have time
 
