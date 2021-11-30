@@ -5,10 +5,10 @@
 
 # Description:  Steps through an example analysis of distance-sampling data
 # using the hierarchical distance-sampling model of Royle et al. 2004 as
-# implemented in the package `unmarked`.
+# implemented in the package unmarked.
 
 # Jason Carlisle - WEST, Inc.
-# Last updated 11/23/2021
+# Last updated 11/30/2021
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 
@@ -61,8 +61,9 @@ require(cowplot)
 # the Wyoming Game and Fish Department near Laramie, WY.
 
 # Specify the path that contains the two example datsets provided:
-# pronghornSiteData.RDS and pronghornDetectionData.RDS
-setwd("W:/My Drive/Workshops/Abundance/PrepPronghornData")
+# pronghornSiteData.RDS
+# pronghornDetectionData.RDS
+setwd("C:/Users/jcarlisle/Documents/R_Code/AbundanceWorkshop/Session2-DistanceSampling/data")
 
 
 # The first required dataset is a sites data.frame
@@ -83,7 +84,7 @@ head(detectionData)
 
 # Without getting too detailed, the survey protocol includes assigning each
 # detected pronghorn to a distance band perpendicular to the plane
-# (e.g., 100 and 150 m).  Then an approximate exact distance is estimated that
+# (e.g., 100 - 150 m).  Then an approximate exact distance is estimated that
 # accounts for the flight altitude at the time of the detection (e.g., 126 m).
 # The result is a quasi-continuous measure of the perpendicular
 # distance between the inner edge of the survey strip and the pronghorn.
@@ -107,18 +108,18 @@ ggplot(detectionData, aes(distM)) + theme_cowplot() +
 
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
-# ---- 3) Format input for unmarked -----
+# ---- 3) Format input datasets for unmarked -----
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 # unmarked uses a multinomial-Poisson mixture model to estimate abundance from
 # distance-sampling data (Royle et al. 2001). They have a great vignette on CRAN
 # about the distance-sampling component of the package.
-# In `unmarked` detection distances are binned prior to analysis. 
+# In `unmarked, detection distances are binned prior to analysis. 
 # Generally more bins is better (Kery and Royle 2016).  We'll use 4 bins here.
 
 # It's common in distance-sampling to exclude the right tail of the distances
 # to improve model stability.  Since the formal survey strip was only 200 m
 # wide, we'll truncate any distances recorded beyond 200 m
-# For unmarked, we just remove these data to right truncate
+# For unmarked, we just remove these data to implement the right truncatation
 trunc <- 200
 
 
@@ -135,7 +136,7 @@ ggplot(detectionData, aes(distM)) + theme_cowplot() +
            label = "Right truncation distance")
 
 
-# Manually truncate
+# Manually remove detections beyond 200 m to right-truncate
 detectionData <- detectionData[detectionData$dist <= trunc, ]
 nrow(detectionData)  # number of detected individuals (3916)
 
@@ -161,7 +162,15 @@ ggplot(detectionData, aes(distM)) + theme_cowplot() +
            label=c("Detected", "Not Detected"), color=c("blue", "red"))
 
 
-# Format (bin) into a matrix with dimensions of number of sites (M or R) 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# QUESTION: How many pronghorn were detected in the 150-200 m distance bin
+# at transect Centennial-12?
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+# Format (bin) into a matrix with dimensions of number of sites (called M or R) 
 # by number of distance intervals (J).  Each cell of the matrix is the observed
 # count in that distance interval for that transect
 
@@ -177,8 +186,13 @@ countMatrix <- formatDistData(distData=detectionData,
 # Look at the first few rows of the matrix
 head(countMatrix, 10)
 
-# Question:  How many pronghorn were detected in the 150-200 m distance bin
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# QUESTION: How many pronghorn were detected in the 150-200 m distance bin
 # at transect Centennial-12?
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 
 # Organize the count matrix along with covariates and metadata
@@ -202,6 +216,14 @@ uFrame <- unmarkedFrameDS(y=countMatrix,
                           survey="line",
                           unitsIn="m")
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# QUESTION: Why does the hack of dividing the survey lengths by 2 work for
+# situations like this where only one side of the transect was surveyed?
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
 # Double-check that the detection and site data are correctly paired
 identical(row.names(uFrame@y), as.character(uFrame@siteCovs$siteID))
 
@@ -221,8 +243,18 @@ fit <- distsamp(~1 ~1, uFrame, keyfun="halfnorm",
                   output="density", unitsOut="kmsq")
 
 # Look at output
-fit
-coef(fit)
+summary(fit)
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# QUESTION: The detection estimate here is not an estimate of detection
+# probability (or the logit of detection probability like it was for the
+# N-mixture model).  What is it an estimate of?
+# HINT:  Look at the names of the Detection parameter estimates and recall
+# which key function we're using (the keyfun argument in the call to distsamp)
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 # Back-transformed output
 # On count or density scale
@@ -237,10 +269,26 @@ exp(coef(fit)[1])
 hist(fit, col="grey", xlab="Distance (m)", lwd=2)
 
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# QUESTION: By your best guess, what is the area of the plot that is under the
+# black detection curve?  This value is the detection probability.
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
 # Probability of detection
+# This involves calculating the fraction of the plot square that is under the
+# detection curve (recall the blue/red figure earlier showing detected and not-
+# detected individuals), hence the integration.
 (detProb <- integrate(gxhn, 0, trunc,
                   sigma=backTransform(fit, type="det")@estimate)$value/trunc)
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# QUESTION: What was the probability of detecting a pronghorn in the survey area
+# during the survey?  How close is it to your earlier best guess from the plot?
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 # Estimate pronghorn density per sq. km (with 95% CI)
@@ -250,11 +298,12 @@ predict(fit, type="state", level=0.95)[1, ]  # Row for each site if no "newdata"
 
 
 # Calculate density by hand to check you understand
-# count / detection prob / area in km^2
-# Number of pronghorn in survey strips
+# Recall that density is the count / detection prob / area in km^2
+
+# Number of pronghorn observed in survey strips
 (obsCount <- nrow(detectionData))  # 3,916 detected
 detProb  # 76% detection probability
-obsCount/detProb  # adjusted estimate of 5,123 pronghorn in survey strips
+obsCount/detProb  # correcting for detection, 5,123 pronghorn in survey strips
 
 # Area of the surveyed strips
 # Only one side of the transect surveyed.  If both sides, multiply trunc by 2
@@ -270,30 +319,22 @@ backTransform(fit, type="state")  # 6.2 pronghorn per sq. km
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 # ---- 5) Model selection with covariates -----
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
-# The objective is to determine whether the 3 herd units have equivalent
+# The objective is to determine which of the 3 herd units has the highest
 # pronghorn density. But it's also possible that differences in topography and
 # vegetation produce different detection probabilities in each herd unit.
-# Therefore, we explore 4 models, some that assume detectability and density
-# are the same among herd units, and some that can account for herd-unit
-# differences in detectability, density, or both.
+# Therefore, we compare 2 models, both test the effect of herd unit on density
+# (our research objective), but one assumes detectability is the same across
+# herd units, and one assumes detectability varies by herd unit.
 # It's also common to explore different shapes of the detection curve (called
-# key functions), but here we'll assume the half-normal shape for all models.
+# key functions), but here we'll assume the half-normal shape for both models.
 
-# Possible covariates
+# Recall that herd is a site-level covariate
 head(siteData)
 
-# Fit 4 models
-# Detectability and density constant across herd units
-hn.null.null <- distsamp(~1 ~1, data=uFrame, keyfun="halfnorm",
-                    output="density", unitsOut="kmsq")
-
+# Fit 2 models
 # Abundance varies by herd unit
 hn.null.herd <- distsamp(~1 ~herd, data=uFrame, keyfun="halfnorm",
                          output="density", unitsOut="kmsq")
-
-# Detectability varies by herd unit
-hn.herd.null <- distsamp(~herd ~1, data=uFrame, keyfun="halfnorm",
-                        output="density", unitsOut="kmsq")
 
 # Detectability and abundance vary by herd unit
 hn.herd.herd <- distsamp(~herd ~herd, data=uFrame, keyfun="halfnorm",
@@ -303,15 +344,24 @@ hn.herd.herd <- distsamp(~herd ~herd, data=uFrame, keyfun="halfnorm",
 
 # Make AIC table comparing models
 # The warning here is fine, we already gave the model objects meaningful names
-(aic <- modSel(fitList(hn.null.null, 
-                       hn.herd.null, 
-                       hn.null.herd, 
+(aic <- modSel(fitList(hn.null.herd, 
                        hn.herd.herd)))
 
 
 # Store top model
 best <- hn.herd.herd
 best
+
+
+# View parameter estimates from top model
+summary(best)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# QUESTION: Which herd unit has the highest pronghorn density?
+# HINT:  The intercept term corresponds to the reference level of the herd
+# factor.  Can you tell which herd unit is represented by the intercept?
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 
@@ -337,7 +387,7 @@ for(i in 1:nrow(predDet)) {
 # Plot detection probabilities
 ggplot(predDet, aes(x=herd, y=p, color=herd)) + theme_cowplot() +
   geom_point(size=3) +
-  scale_color_viridis_d(name="Herd unit", alpha=0.8) +
+  scale_color_viridis_d(name="Herd unit") +
   geom_errorbar(aes(ymin=p.lower, ymax=p.upper), width=0.05) +
   scale_y_continuous(limits=c(0, 1), expand=expansion(mult=c(0, 0.01))) +
   ylab("Detection probability (p)") +
@@ -349,16 +399,21 @@ ggplot(predDet, aes(x=herd, y=p, color=herd)) + theme_cowplot() +
 detFunData <- do.call(rbind, lapply(1:nrow(predDet), function(i) {
   data.frame(dist=0:trunc,
              p=gxhn(x=0:trunc, sigma=predDet$Predicted[i]),
+             p.lower=gxhn(x=0:trunc, sigma=predDet$lower[i]),
+             p.upper=gxhn(x=0:trunc, sigma=predDet$upper[i]),
              herd=predDet$herd[i])
 }))
 
 ggplot(detFunData, aes(x=dist, y=p, color=herd)) + theme_cowplot() +
   geom_line(size=1.5) +
-  scale_color_viridis_d(name="Herd unit", alpha=0.8) +
+  geom_ribbon(aes(ymin=p.lower, ymax=p.upper, fill=herd, color=NA)) +
+  scale_color_viridis_d(name="Herd unit") +
+  scale_fill_viridis_d(name="Herd unit", alpha=0.2) +
   scale_y_continuous(limits=c(0, 1), expand=expansion(mult=c(0, 0.01))) +
   scale_x_continuous(limits=c(0, trunc), expand=expansion(mult=c(0, 0))) +
   ylab("Detection probability (p)") +
-  xlab("Distance (m)")
+  xlab("Distance (m)") +
+  facet_wrap(~herd, ncol=1)
 
 
 
@@ -375,6 +430,15 @@ ggplot(predAbund, aes(x=herd, y=Predicted, fill=herd)) + theme_cowplot() +
   ylab("Density (pronghorn/km^2)") +
   xlab("Herd Unit")
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# QUESTION: Now that you've made the graph, the previous question may be
+# easier to answer -- Which herd unit has the highest pronghorn density?
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# QUESTION: How would you estimate the number of pronghorn in each herd unit?
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 # END
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
