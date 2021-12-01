@@ -59,10 +59,10 @@ citation("unmarked")
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 # Specify the path that contains the salamander count data (Salamander_Wildfire.csv) 
-setwd()
+# use setwd()
 
 # read-in the salamander count data
-df <- read.csv("data/Salamander_Wildfire.csv")
+df <- read.csv("Session1-NMixture/data/Salamander_Wildfire.csv")
 
 # We now have our data stored as 'df'
 # check out our data
@@ -237,6 +237,21 @@ max(C) # max observed count was 30...30+100=130 for K
 # model are not restricted to point count data, as we can see with our use
 # of counts along transects.
 
+
+# NOTE: if you have transects or sampling areas of different lengths or sizes and/or
+#       if you want to estimate the number of individuals per unit area (density),
+#       you can add an offset term to the right-hand side of the abundance formula.
+
+# For example: 
+# m2 <- pcount(~time ~burned + offset(log(TransectLength)), data=umf, K=130) or
+# m2 <- pcount(~time ~burned + offset(log(Area)), data=umf, K=130)
+
+# In the two example models above, you would simply code/include 'TransectLength'
+# or 'Area' in your unmarked dataframe as a site-level covariate.
+
+
+
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # QUESTIONS:
 # Look at output
@@ -356,12 +371,35 @@ cbind(AIC.P=m2@AIC, AIC.NB=m3@AIC, AIC.ZIP=m4@AIC)
 # QUESTION: Poisson has lowest AIC. Why might this be? Discuss with the group.
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
+
 # Predict back to landscape
 library(raster)
 library(rgdal)
 
+# NOTE in the code below: 
+# When we predict to the raster surface (in the below code), we are assuming that the
+# area of each raster cell is equivalent to the area surveyed at each transect.
+# Each raster cell is a 30 meter by 30 meter square, so we are assuming that area
+# was equivalent to the area surveyed at each transect. This is just for illustrative
+# purposes, as it is unlikely that our transect area matches the raster cell size.
+# So in practice, we should make sure that, when predicting from the model,
+# that we are predicting the number of individuals to the correct per unit area.
+# One way to accomplish this would be to include the size/area of our sampling
+# area by adding an offset term to the right-hand side of the abundance formula (as shown below).
+# This will then estimate the number of individuals per unit area (density).
+# Then, when predicting back to the landscape, you can predict the number of individuals
+# per unit area, in other words words the number of individuals in each raster cell (30 m x 30 m)
+
+# For example: 
+# m2 <- pcount(~time ~burned + offset(log(TransectLength)), data=umf, K=130) or
+# m2 <- pcount(~time ~burned + offset(log(Area)), data=umf, K=130)
+
+# In the two example models above, you would simply code/include 'TransectLength'
+# or 'Area' in your unmarked dataframe as a site-level covariate.
+
 # Load the burned severity raster of our study area
-fire <- raster("data/BurnSeverity.tif")
+fire <- raster("Session1-NMixture/data/BurnSeverity.tif")
 mapPalette <- colorRampPalette(c("grey", "yellow", "orange", "red"))
 plot(fire, col = mapPalette(100), axes = F, box = F, main = "% Burned Area")
 res(fire) # 30 m x 30 m resolution (grid size)
@@ -370,7 +408,7 @@ CH <- as.data.frame(fire, xy=TRUE)
 CH <- data.frame(x = CH$x, y = CH$y, burned = CH$BurnSeverity)
 
 # Get predictions of abundance for each 30 m x 30 m cell of study area
-newData <- data.frame(burned = CH$burned)
+newData <- data.frame(burned = CH$burned) # would need sampling area in this data frame (see note above)!!!
 predCH <- predict(m2, type="state", newdata=newData)
 
 # Define new data frame with coordinates and outcome to be plotted
@@ -388,7 +426,75 @@ mapPalette <- colorRampPalette(c("grey", "yellow", "orange", "red"))
 plot(r1, col = mapPalette(100), axes = F, box = F, main = "Salamander abundance")
 plot(fire, col = mapPalette(100), axes = F, box = F, main = "% Burned Area")
 
+
+
+
+
+
+
+# Now let's predict back to the landscape, accounting for differences in sampling area
+
+# Here are the data for analysis:
+C      # matrix of survey data (salamander counts)
+burned # percent burned area at each transect (we think it might influence abundance)
+time   # time recorded during every survey (we think it might influence detection)
+
+# we need a site-level covariate for the area surveyed at each transect
+# let's sample some values between 700m2 and 1000m2
+Area <- sample(700:1000, 10, replace = TRUE)
+Area <- as.matrix(Area)
+Area
+
+# Input data into an 'unmarked data frame'
+umf <- unmarkedFramePCount(
+  y=C,                                              # Counts matrix
+  siteCovs= data.frame(burned = burned, Area=Area), # Site covariates
+  obsCovs = list(time = time))                      # Observation covariates
+
+# Explore umf, the input data to unmarked for analysis
+# Good point to stop and ensure you're feeding the model what you think you are
+head(umf)
+summary(umf)
+
+# fit model with offset for Area (total area surveyed at each transect)
+m2 <- pcount(~time ~burned + offset(log(Area)), data=umf, K=130)
+
+# Load the burned severity raster of our study area
+fire <- raster("Session1-NMixture/data/BurnSeverity.tif")
+mapPalette <- colorRampPalette(c("grey", "yellow", "orange", "red"))
+par(mfrow = c(1,1), mar = c(1,2,2,5))
+plot(fire, col = mapPalette(100), axes = F, box = F, main = "% Burned Area")
+res(fire) # 30 m x 30 m resolution (grid size)
+# crs(fire)
+CH <- as.data.frame(fire, xy=TRUE)
+CH <- data.frame(x = CH$x, y = CH$y, burned = CH$BurnSeverity)
+
+# Get predictions of abundance for each 30 m x 30 m cell of study area
+newData <- data.frame(burned = CH$burned)
+newData$Area <- 900 # because each raster cell in 30 m x 30 m so has area of 900m2
+predCH <- predict(m2, type="state", newdata=newData)
+
+# Define new data frame with coordinates and outcome to be plotted
+PARAM <- data.frame(x = CH$x, y = CH$y, z = predCH$Predicted)
+r1 <- rasterFromXYZ(PARAM)     # convert into raster object
+
+# Plot predicted salamander abundance in study area (based on model m2)
+par(mfrow = c(1,1), mar = c(1,2,2,5))
+mapPalette <- colorRampPalette(c("grey", "yellow", "orange", "red"))
+plot(r1, col = mapPalette(100), axes = F, box = F, main = "Salamander abundance (mean predicted values)")
+
+# Plot predicted salamander abundance in study area (based on model m2)
+par(mfrow = c(1,2))
+mapPalette <- colorRampPalette(c("grey", "yellow", "orange", "red"))
+plot(r1, col = mapPalette(100), axes = F, box = F, main = "Salamander abundance")
+plot(fire, col = mapPalette(100), axes = F, box = F, main = "% Burned Area")
+
+
+
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 # END
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+
+
+
 
