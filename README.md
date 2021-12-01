@@ -4,7 +4,7 @@ Materials (i.e., code, slides, data) associated with a workshop on abundance est
 
 ### Content:
 
-- N-mixture models
+- N-mixture models ([video recording of workshop session](https://youtu.be/PL8havRwVNc]))
 - Distance sampling
 - Capture-mark-recapture
 
