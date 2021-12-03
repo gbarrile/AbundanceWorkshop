@@ -208,7 +208,7 @@ d.ddl$p
 # Discuss with the group, focus on those two columns mentioned above.
 
 
-# NOTE: you may notice 'time' versus 'Time' for columns withing the design data
+# NOTE: you may notice 'time' versus 'Time' for columns within the design data
 # RMark uses 'time' as a categorical variable and 'Time' as a continuous variable
 # Just something to be aware of
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -221,10 +221,10 @@ d.ddl$c
 # the number of individuals never captured
 d.ddl$f0
 # the notation 'f0' originates from the frequency (count) of animals observed 0 times). 
-# The f0 parametrization is useful computationally because f0 is bounded on the 
+# The f0 parameterization is useful computationally because f0 is bounded on the 
 # interval [0, positive infinity], thus forcing the logical constraint that 
 # N > the number of individuals marked (M). 
-# In fact, MARK uses the f0 parametrization for ease of computation by using 
+# In fact, MARK uses the f0 parameterization for ease of computation by using 
 # the log link function to constrain f0 >= 0, and presents the results in terms of N 
 # as a derived parameter.
 # In other words, the likelihood is rewritten in MARK in terms of the 
@@ -244,7 +244,7 @@ d.ddl$f0
 # p (capture probability)
 pc.=list(formula= ~ 1, share = TRUE)
 # share = TRUE indicates p = c or capture probability = recapture probability
-# for this session, we are going to assume that capture probablity is
+# for this session, we are going to assume that capture probability is
 # equal to recapture probability
 
 # ~ 1 or the intercept model is often referred to as the 'constant' model, 
