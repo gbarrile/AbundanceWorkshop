@@ -206,6 +206,11 @@ d.ddl$p
 # look at columns 'time' and 'pond'
 # QUESTION: why do we have 12 rows in this table? 
 # Discuss with the group, focus on those two columns mentioned above.
+
+
+# NOTE: you may notice 'time' versus 'Time' for columns withing the design data
+# RMark uses 'time' as a categorical variable and 'Time' as a continuous variable
+# Just something to be aware of
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # recapture probability
@@ -256,12 +261,23 @@ f0.=list(formula= ~ 1)
 # it does NOT mean that the abundance is the same at all ponds,
 # just that the number we failed to capture is the same
 
+# if you think about, it is likely unreasonable to assume that f0 is constant
+# among sites in most cases. Here we are just fitting a constant model
+# for illustrative purposes, but will allow f0 to vary among sites in
+# subsequent models below
+
 
 # fit Model 1
 # you will need (want) an output folder for the mark files, just so your
 # directory does not get cluttered
 # Create a new folder called 'models' in your working directory
 # set working directory to that folder
+modelDir <- file.path(getwd(), "models")
+dir.create(modelDir)
+setwd(modelDir)
+
+
+
 setwd("H:/Abundance_Workshop/models")
 
 # mark() is the model-fitting function 
