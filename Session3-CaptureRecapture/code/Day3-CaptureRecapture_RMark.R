@@ -276,10 +276,6 @@ modelDir <- file.path(getwd(), "models")
 dir.create(modelDir)
 setwd(modelDir)
 
-
-
-setwd("H:/Abundance_Workshop/models")
-
 # mark() is the model-fitting function 
 m1 <- mark(d.proc, # process data
            d.ddl,  # design data
@@ -350,9 +346,8 @@ p.timepond =list(formula= ~ time * pond, share = TRUE)
 d.ddl$f0
 f0.pond =list(formula= ~ pond)
 
-# fit model
-# again specify your output folder
-setwd("H:/Abundance_Workshop/models")
+
+# fit Model 2
 
 # mark() is the model-fitting function 
 m2 <- mark(d.proc, # process data
@@ -515,8 +510,6 @@ pc.=list(formula= ~ 1, share = TRUE)
 
 
 # fit Model 3
-# specify your output folder
-setwd("H:/Abundance_Workshop/models")
 
 # mark() is the model-fitting function
 m3 <- mark(d.proc, # process data
@@ -571,8 +564,6 @@ m3$results$derived
 pc.svl =list(formula= ~ svl, share = TRUE)
 
 # fit Model 4
-# specify your output folder
-setwd("H:/Abundance_Workshop/models")
 
 # mark() is the model-fitting function
 m4 <- mark(d.proc, # process data
