@@ -1,59 +1,105 @@
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# December 3, 2021
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# ABUNDANCE ESTIMATION WORKSHOP
+# Sponsored by Wyoming EPSCoR
+# Example 3: Closed population capture-recapture model
 
-# Day 3 of workshop: Statistical Methods for Estimating Abundance in Ecology
+# Description: Steps through an example analysis of capture-mark-recapture data
+# using the Closed Population Estimation Model ('Closed') as implemented 
+# in the package `RMark`.
 
-# Code to fit 'Closed Population Estimation' in the 'RMark' package
+# Online resource for understanding the model that we will fit in this session:
+# http://www.phidot.org/software/mark/docs/book/pdf/chap14.pdf
 
 # Addressing the question: "How does boreal toad abundance vary across ponds?"
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Gabe Barrile - Colorado State University
+# Last updated 12/03/2021
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 
-# install the packages that we will use:
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# ---- Outline -----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# This script contains the following sections:
+# 1) Install and load packages
+# 2) Read in input data
+# 3) Format input datasets for RMark
+# 4) Process and explore datasets in RMark
+# 5) Fit Closed Population Capture-Recapture Model
+# 6) Prediction and plotting
+# 7) Code to explore on your own (or as a group if there's time)
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
-#install.packages("RMark")
-#install.packages("reshape")
-#install.packages("ggplot2")
 
-# make sure packages are installed and active
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# ---- 1) Install and load packages -----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# Check if RMark, reshape, and ggplot2 are installed.
+# If yes, load them.  If not, install, then load.
+
+# RMark for fitting the Closed Population Capture-Recapture Model
+if("RMark" %in% rownames(installed.packages()) == FALSE) {
+  install.packages("RMark")
+}
 require(RMark)
+
+# reshape to format data
+if("reshape" %in% rownames(installed.packages()) == FALSE) {
+  install.packages("reshape")
+}
 require(reshape)
+
+# ggplot2 for plotting
+if("ggplot2" %in% rownames(installed.packages()) == FALSE) {
+  install.packages("ggplot2")
+}
 require(ggplot2)
 
-
-# citing the RMark package
+# if you needed to cite the RMark package
 citation("RMark")
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# ---- 2) Read in input data -----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+
+# Specify path that contains the capture-mark-recapture data (BorealToad_CaptureRecapture.csv) 
+# use setwd()
 
 # read-in the boreal toad capture-mark-recapture data from our three ponds  
-#  read-in data from the csv
-df <- read.csv("data/BorealToad_CaptureRecapture.csv")
+df <- read.csv("Session3-CaptureRecapture/data/BorealToad_CaptureRecapture.csv")
 
-# so now we have our data stored as 'df'
+# We now have our data stored as 'df'
+# check out our data
+head(df)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# How many unique individuals did we tag?
+# QUESTION: How many unique individuals did we tag?
 # Hint: can use length() and unique() functions
-
+length(unique()) 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# ---- 3) Format data for RMark -----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 # order dataframe by animal id
 df <- with(df,df[order(Tag),])
 head(df, 8)
 
-# format data for RMark
+# create capture histories for each individual toad
+# don't worry too much about what this code is doing right now,
+# but do return on your own time to make sure you understand
+# how the data is being formatted
 input.data <- df
-
 input.data$detect <- rep(1,nrow(input.data))
-
 m <- melt(input.data, id.var = c("Tag","Survey"), measure.var = "detect")
-
 y = cast(m, Tag ~ Survey)
-
-head(y)
-
 y[is.na(y)] = 0
 k <- dim(y)[2]
 
@@ -81,26 +127,21 @@ capt.hist <- data.frame(ch = pasty(y[,2:k]))
 head(capt.hist)
 
 y$ch <- pasty(y[,2:k])
-
 head(y)
-# 'ch' is character, not numeric
 
 # check if all capture histories are length = 4 (for each of our four visits to each pond)
 nchar(y$ch)
-table(nchar(y$ch))
+table(nchar(y$ch)) # 'ch' must be character, makes sure it's not numeric
 
 # add variables to 'y' dataframe
-
 # Pond
 y$Pond <- df$Pond[match(y$Tag, df$Tag)]
 
 # SVL
 svl <- aggregate(SVL ~ Tag, data=df, FUN=mean)
-head(svl)
 
 # match by tag number to add SVL to y dataframe
 y$SVL <- svl$SVL[match(y$Tag, svl$Tag)]
-
 
 # boto will be our dataframe that we input into RMark
 boto <- data.frame(ch = y$ch, freq = 1, pond = y$Pond, 
@@ -113,10 +154,8 @@ rm(capt.hist,input.data,m,svl,y,k,pasty)
 
 
 
-
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Check capture histories against our field data
+# QUESTION: Check capture histories against our field data
 # Look at toads with the following tag numbers: 100, 101, and 102
 head(df, 10)
 # Do the capture histories ('ch' column in boto) make sense for those three individuals?
@@ -124,29 +163,26 @@ head(boto, 3)
 # Stop here and make sure you understand the capture histories (the 'ch' column in boto df)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
 # make pond a factor variable
 boto$pond <- as.factor(as.character(boto$pond))
 table(boto$pond)
 
 # are we missing any data?
 table(is.na(boto)) # no missing data = good!
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 
-
-
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# ---- 4) Process and explore data in RMark -----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 # process data in RMark 
-
-###### CLOSED MODELS FOR ABUNDANCE ################
-d.proc=process.data(boto, model="Closed", # Assumes NO Births, NO Deaths, NO Immigration, NO Emigration  
-                    groups = c("pond"))
+d.proc=process.data(boto, model="Closed", groups = c("pond"))
 # RMark includes lots of models that can be input into the model= argument above
 # Here we use the "Closed" model because we are interested in 
 # Closed Population Estimation for modeling Abundance
 # Visit this link for a full list of MARK models supported in RMark:
 # https://github.com/jlaake/RMark/blob/master/RMark/inst/MarkModels.pdf
-
 
 # create design data
 d.ddl <- make.design.data(d.proc)
@@ -162,22 +198,13 @@ names(d.ddl)
 # "c" = recapture probability
 # "f0" = the number of individuals never captured (read more below)
 
-# capture and recapture probabilities can be the same or can be different 
-# let's say you catch a rabbit in a trap for the first time 
-# (that's your capture probability)
-# Then let's say that rabbit subsequently avoids your traps
-# In that case, it's very likely that your recapture probability of that rabbit
-# is different than the probability of capturing that rabbit the first time
-# This is just one example whereby capture and recapture probability can differ
-
 # look at design data for each parameter
-
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # capture probability
 d.ddl$p
 # look at columns 'time' and 'pond'
-# why do we have 12 rows in this table? 
+# QUESTION: why do we have 12 rows in this table? 
 # Discuss with the group, focus on those two columns mentioned above.
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -199,20 +226,26 @@ d.ddl$f0
 # number of individuals never caught, f0, such that f0 = N - M 
 # (M = the number of individuals marked)
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 
-
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# ---- 5) Fit Closed Population Capture-Recapture Model -----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 # specify models for each parameter
 
 # Model 1
-
 # p (capture probability)
 pc.=list(formula= ~ 1, share = TRUE)
 # share = TRUE indicates p = c or capture probability = recapture probability
+# for this session, we are going to assume that capture probablity is
+# equal to recapture probability
+
 # ~ 1 or the intercept model is often referred to as the 'constant' model, 
 # meaning that capture probability is constant over time and space 
 # (e.g., doesn't vary across surveys or at different ponds)
+
 
 # f0 (number of individuals never captured)
 f0.=list(formula= ~ 1)
@@ -229,15 +262,17 @@ f0.=list(formula= ~ 1)
 # directory does not get cluttered
 # Create a new folder called 'models' in your working directory
 # set working directory to that folder
-setwd()
+setwd("H:/Abundance_Workshop/models")
 
-m1 <- mark(d.proc,
-           d.ddl, 
-           model.parameters = list(p = pc.,
-                                   f0= f0.))
+# mark() is the model-fitting function 
+m1 <- mark(d.proc, # process data
+           d.ddl,  # design data
+           model.parameters = list(p  = pc.,  # model for capture probability
+                                   f0 = f0.)) # model for f0
 
 
 # look at model output
+# m1 # this brings up the output you would get in Program MARK
 
 # beta coefficients
 m1$results$beta
@@ -245,14 +280,21 @@ m1$results$beta
 
 # real estimates (on the scale we tend to think on)
 m1$results$real
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# QUESTION: what is our capture probability?
+# How many individuals were never captured at each site?
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # derived parameters
-m1$results$derived # what is the estimated abundance at each pond?
-# Pond 1 = first row, Pond 2 = second row, Pond 3 = third row
-
-
+m1$results$derived
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# how is abundance estimated?
+# QUESTION: what is the estimated abundance at each pond?
+# Pond 1 = first row, Pond 2 = second row, Pond 3 = third row
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+# Let's look at how abundance is estimated
 # f0
 f0 <- m1$results$real[2,1]
 f0
@@ -273,8 +315,6 @@ f0
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-
-
 # Model 2
 
 # Obtain different capture probability for each survey at each pond
@@ -282,8 +322,6 @@ f0
 # We conducted 4 surveys at each of three ponds, so 12 surveys total
 # Therefore we should end up with 12 different capture probabilities,
 # one for each survey at each site
-
-# share p and c
 
 # p
 d.ddl$p
@@ -298,32 +336,42 @@ f0.pond =list(formula= ~ pond)
 
 # fit model
 # again specify your output folder
-setwd()
+setwd("H:/Abundance_Workshop/models")
 
-m2 <- mark(d.proc,
-           d.ddl, 
-           model.parameters = list(p = p.timepond,
-                                   f0= f0.pond))
+# mark() is the model-fitting function 
+m2 <- mark(d.proc, # process data
+           d.ddl,  # design data
+           model.parameters = list(p  = p.timepond, # model for capture probability
+                                   f0 = f0.pond))   # model for f0
 
 
 # look at model output
 
-# beta coefficients
-m2$results$beta
-
 # real estimates 
 m2$results$real
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# STOP! Make sure you understand why there are:
+# 12 estimates for capture probability and
+# 3 estimates for f0
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # derived parameters
 m2$results$derived
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# QUESTION: which pond had the highest abundance? lowest?
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # compare models with AICc
 c(m1$results$AICc,m2$results$AICc)
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# ---- 6) Plot model predictions -----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 # let's plot the estimated abundance at each pond,
 # using estimates from Model 2 (m2)
-
 abund <- m2$results$derived$`N Population Size`
 abund$pond <- c("Pond 1", "Pond 2", "Pond 3")
 abund$pond <- as.factor(abund$pond)
@@ -350,10 +398,8 @@ ggplot(abund, aes(x=pond, y=estimate, color=pond)) +
     axis.text.y = element_text(size = 12, color = "black"))
 
 
-
 # let's plot capture probability during each survey at each pond,
 # again using estimates from Model 2 (m2)
-
 cap <- m2$results$real[1:12,c(1,3,4)]
 cap$pond <- c("Pond 1", "Pond 1", "Pond 1", "Pond 1",
               "Pond 2", "Pond 2", "Pond 2", "Pond 2",
@@ -388,38 +434,20 @@ ggplot(cap, aes(x=survey, y=estimate, group=pond, color=pond)) +
   theme(legend.text = element_text(size = 17))+
   theme(legend.position="top")+
   theme(strip.text = element_text(size = 7))
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-# STOP
-
-# Explore the remaining code on your own
-
-
-
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# ---- 7) Code to explore on your own (or as a group if there's time) -----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 # Now let's incorporate individual covariates (e.g., SVL) into our models
 
 # process data in RMark 
-
-###### CLOSED MODELS FOR ABUNDANCE ################
 d.proc=process.data(boto, model="Huggins") 
 # let's not worry about different ponds in this example, so no groups = c("pond")
 
 # Huggins models condition abundance out of the likelihood,
 # thus permitting the modelling of capture probability as a function of individual covariates
-
 
 # create design data
 d.ddl <- make.design.data(d.proc)
@@ -460,7 +488,7 @@ d.ddl$f0
 
 # specify models for each parameter
 
-# Model 1
+# Model 3
 
 # p (capture probability)
 pc.=list(formula= ~ 1, share = TRUE)
@@ -471,9 +499,13 @@ pc.=list(formula= ~ 1, share = TRUE)
 
 
 # fit Model 3
-m3 <- mark(d.proc,
-           d.ddl, 
-           model.parameters = list(p = pc.))
+# specify your output folder
+setwd("H:/Abundance_Workshop/models")
+
+# mark() is the model-fitting function
+m3 <- mark(d.proc, # process data
+           d.ddl,  # design data
+           model.parameters = list(p = pc.)) # model for capture probability
 
 
 # look at model output
@@ -517,17 +549,19 @@ m3$results$derived
 
 
 
-# svl as individual covariate on capture probability
+# Now let's use svl as individual covariate on capture probability
 
 # p (capture probability)
 pc.svl =list(formula= ~ svl, share = TRUE)
 
-
 # fit Model 4
-m4 <- mark(d.proc,
-           d.ddl, 
-           model.parameters = list(p = pc.svl))
+# specify your output folder
+setwd("H:/Abundance_Workshop/models")
 
+# mark() is the model-fitting function
+m4 <- mark(d.proc, # process data
+           d.ddl,  # design data
+           model.parameters = list(p = pc.svl)) # model for capture probability
 
 # look at model output
 
@@ -539,7 +573,6 @@ m4$results$real
 
 # derived parameters
 m4$results$derived
-
 
 # plot relationship between capture probability and SVL
 range(boto$svl)
@@ -558,6 +591,9 @@ lines(pred.svl$covdata, pred.svl$estimate, lwd=8, col="blue")
 lines(pred.svl$covdata, pred.svl$lcl, lwd=4, lty=2, col="black")
 lines(pred.svl$covdata, pred.svl$ucl, lwd=4, lty=2, col="black")
 
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+# END
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 
 
