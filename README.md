@@ -7,10 +7,11 @@ Materials (i.e., code, slides, data) associated with a workshop on abundance est
 - N-mixture models ([video recording of workshop session](https://youtu.be/PL8havRwVNc]))
 - Distance sampling ([video recording of workshop session](https://youtu.be/_RwtJmtlUzI))
 - Capture-mark-recapture ([video recording of workshop session](https://youtu.be/RMKk3mkJNk0))
+- Open work session - bring your own data and/or questions (not recorded)
 
 ### Date:
 
-Nov 29, Dec 1, 3, 6, 2021 | 3 - 4:30 PM Mountain Time
+Nov 29 - Dec 6, 2021
 
 
 ### Instructors:
