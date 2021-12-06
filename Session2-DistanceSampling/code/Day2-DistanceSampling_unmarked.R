@@ -163,13 +163,6 @@ ggplot(detectionData, aes(distM)) + theme_cowplot() +
 
 
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# QUESTION: How many pronghorn were detected in the 150-200 m distance bin
-# at transect Centennial-12?
-#
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
 # Format (bin) into a matrix with dimensions of number of sites (called M or R) 
 # by number of distance intervals (J).  Each cell of the matrix is the observed
 # count in that distance interval for that transect
@@ -250,8 +243,8 @@ summary(fit)
 # QUESTION: The detection estimate here is not an estimate of detection
 # probability (or the logit of detection probability like it was for the
 # N-mixture model).  What is it an estimate of?
-# HINT:  Look at the names of the Detection parameter estimates and recall
-# which key function we're using (the keyfun argument in the call to distsamp)
+# HINT:  Recall which key function we're using (the keyfun argument in the call
+# to distsamp), what parameter controls the width of that distribution?
 #
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -360,6 +353,18 @@ summary(best)
 # QUESTION: Which herd unit has the highest pronghorn density?
 # HINT:  The intercept term corresponds to the reference level of the herd
 # factor.  Can you tell which herd unit is represented by the intercept?
+#
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# QUESTION: Revisiting an earlier question
+# The detection estimate here is not an estimate of detection
+# probability (or the logit of detection probability like it was for the
+# N-mixture model).  What is it an estimate of?
+# HINT:  Recall which key function we're using (the keyfun argument in the call
+# to distsamp), what parameter controls the width of that distribution?
+# The name of this parameter is now part of the name of each parameter estimate
+# printed here under the "Detection (log-scale)" heading
 #
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
